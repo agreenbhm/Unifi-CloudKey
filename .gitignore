@@ -1,2 +1,5 @@
 /apt
 /root
+docker_file.tgz
+unifi-cloudkey_docker.tar
+.obsidian/
