@@ -4,11 +4,17 @@
 	`deb [ arch=amd64,arm64 ] https://www.ui.com/downloads/unifi/debian stable ubiquiti`
 	`deb http://archive.debian.org/debian-security jessie/updates main contrib non-free
 	`deb http://archive.debian.org/debian/ jessie main contrib non-free`
-	
+- Enable Unifi (via file)
+	- `touch /var/run/unifi_runtime.cfg`
+- Fix Unifi Version check
+	- `usermod -a -G docker www-data`
+	- `sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc`
  - Install Docker
 	* `apt update && apt install docker-ce`
 * Disable Unifi
 	* `systemctl disable unifi && systemctl stop unifi`
+* Disable Mongodb
+	* `systemctl disable mongodb && systemctl stop mongodb`
 	
 * Downgrade Docker (to fix bug)
 	* `wget https://download.docker.com/linux/debian/dists/jessie/pool/stable/armhf/docker-ce_18.06.1~ce~3-0~debian_armhf.deb`
@@ -32,4 +38,6 @@
 - Configure Unfi Container
 	- `apt update && apt install nano ca-certificates openjdk-17-jdk`
 	- `echo 'deb [trusted=yes] http://www.ubnt.com/downloads/unifi/debian cloudkey-stable ubiquiti' > /etc/apt/sources.list.d/ubnt-unifi.list`
+- Run Custom Docker Container
+	- `docker run -it --name unifi --hostname unifi --network host agreenbhm/unifi-cloudkey:8.4.59 /entrypoint.sh`
 	- 

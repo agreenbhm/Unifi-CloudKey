@@ -1,10 +1,10 @@
-FROM --platform=linux/armhf debian:bullseye
+#FROM --platform=linux/armhf debian:bullseye
+FROM debian:bullseye
 
 RUN apt update
 RUN echo "deb [trusted=yes] https://andrewharle.github.io/REPO/debian buster experimental" > /etc/apt/sources.list.d/100-andrewharle_repo.list
-RUN apt install -yf nano ca-certificates openjdk-17-jdk
+RUN apt install -yf nano ca-certificates openjdk-17-jdk-headless wget procps net-tools
 RUN apt update
-RUN apt install -yf wget
 
 WORKDIR /tmp/
 
@@ -17,8 +17,6 @@ RUN dpkg -i libboost-filesystem1.67.0_1.67.0-17ubuntu8_armhf.deb
 RUN dpkg -i libboost-iostreams1.67.0_1.67.0-17ubuntu8_armhf.deb
 RUN dpkg -i libboost-program-options1.67.0_1.67.0-17ubuntu8_armhf.deb
 RUN apt install -yf mongodb
-
-RUN apt -yf install procps net-tools
 
 RUN echo "port = 27117" >> /etc/mongodb.conf
 RUN echo "storageEngine=mmapv1" >> /etc/mongodb.conf
@@ -43,4 +41,6 @@ COPY armv7 /usr/lib/unifi/lib/native/Linux/armv7/
 COPY etc_default_unifi /etc/default/unifi
 COPY unifi /etc/init.d/unifi
 RUN chmod +x /etc/init.d/unifi
-ENTRYPOINT [ "/entrypoint.sh" ]
+
+WORKDIR /
+#ENTRYPOINT [ "/entrypoint.sh" ]
