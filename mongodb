@@ -1,0 +1,56 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          mongodb
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $network $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/stop MongoDB
+# Description:       An object/document-oriented database
+### END INIT INFO
+
+# Source function library.
+. /lib/lsb/init-functions
+
+# Configuration and runtime variables
+CONF=/etc/mongodb.conf
+SOCKETPATH=/run/mongodb
+DAEMON=/usr/bin/mongod
+DAEMON_USER=mongodb
+DAEMON_GROUP=mongodb
+DAEMON_OPTS="--unixSocketPrefix=${SOCKETPATH} --config ${CONF} $DAEMON_OPTS"
+PIDFILE=/var/run/mongodb/mongod.pid
+DESC="MongoDB Database Server"
+NAME=mongod
+
+case "$1" in
+  start)
+    log_daemon_msg "Starting $DESC" "$NAME"
+    if start-stop-daemon --start --quiet --pidfile $PIDFILE --chuid $DAEMON_USER:$DAEMON_GROUP --exec $DAEMON -- $DAEMON_OPTS; then
+      log_end_msg 0
+    else
+      log_end_msg 1
+    fi
+    ;;
+  stop)
+    log_daemon_msg "Stopping $DESC" "$NAME"
+    if start-stop-daemon --stop --quiet --pidfile $PIDFILE --retry 10; then
+      log_end_msg 0
+    else
+      log_end_msg 1
+    fi
+    ;;
+  restart|force-reload)
+    $0 stop
+    $0 start
+    ;;
+  status)
+    status_of_proc -p $PIDFILE $DAEMON "$NAME" && exit 0 || exit $?
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|force-reload|status}"
+    exit 1
+    ;;
+esac
+
+exit 0

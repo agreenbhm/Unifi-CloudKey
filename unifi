@@ -1,0 +1,63 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          unifi
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $network $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/stop UniFi Controller
+# Description:       UniFi Network Application
+### END INIT INFO
+
+# Source function library.
+. /lib/lsb/init-functions
+
+# Configuration and runtime variables
+WORKING_DIR=/usr/lib/unifi/
+DAEMON_USER=unifi
+DAEMON=/usr/bin/java
+DAEMON_OPTS="-Dfile.encoding=UTF-8 -Djava.awt.headless=true -Dapple.awt.UIElement=true -Dunifi.core.enabled=${UNIFI_CORE_ENABLED} -Dunifi.mongodb.service.enabled=${UNIFI_MONGODB_SERVICE_ENABLED} $UNIFI_JVM_OPTS -XX:+ExitOnOutOfMemoryError -XX:+CrashOnOutOfMemoryError -XX:ErrorFile=/usr/lib/unifi/logs/unifi_crash.log -Xlog:gc:logs/gc.log:time:filecount=2,filesize=5M --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/sun.security.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.rmi/sun.rmi.transport=ALL-UNNAMED -jar /usr/lib/unifi/lib/ace.jar start"
+PIDFILE=/var/run/unifi/unifi.pid
+DESC="UniFi Network Application"
+NAME=unifi
+
+# Load environment files
+[ -f /usr/lib/unifi/data/system_env ] && . /usr/lib/unifi/data/system_env
+[ -f /etc/default/unifi ] && . /etc/default/unifi
+
+case "$1" in
+  start)
+    log_daemon_msg "Starting $DESC" "$NAME"
+    start-stop-daemon --start --quiet --pidfile $PIDFILE --chuid $DAEMON_USER --exec $DAEMON --chdir ${WORKING_DIR} -- $DAEMON_OPTS
+    if [ $? -eq 0 ]; then
+      log_end_msg 0
+      /usr/sbin/unifi-network-service-helper init
+      /usr/sbin/unifi-network-service-helper init-uos
+    else
+      log_end_msg 1
+    fi
+    ;;
+  stop)
+    log_daemon_msg "Stopping $DESC" "$NAME"
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE
+    if [ $? -eq 0 ]; then
+      log_end_msg 0
+      /usr/sbin/unifi-network-service-helper cleanup
+    else
+      log_end_msg 1
+    fi
+    ;;
+  restart|force-reload)
+    $0 stop
+    $0 start
+    ;;
+  status)
+    status_of_proc -p $PIDFILE $DAEMON "$NAME" && exit 0 || exit $?
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|force-reload|status}"
+    exit 1
+    ;;
+esac
+
+exit 0
