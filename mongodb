@@ -16,8 +16,8 @@
 CONF=/etc/mongodb.conf
 SOCKETPATH=/run/mongodb
 DAEMON=/usr/bin/mongod
-DAEMON_USER=mongodb
-DAEMON_GROUP=mongodb
+DAEMON_USER=root
+DAEMON_GROUP=root
 DAEMON_OPTS="--unixSocketPrefix=${SOCKETPATH} --config ${CONF} $DAEMON_OPTS"
 PIDFILE=/var/run/mongodb/mongod.pid
 DESC="MongoDB Database Server"

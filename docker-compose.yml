@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: agreenbhm/unifi-cloudkey:8.4.59
+    container_name: mongodb
+    hostname: mongodb
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /data/unifi/var/lib/mongodb:/var/lib/mongodb
+    command: /etc/init.d/mongodb start
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "27117"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  unifi:
+    image: agreenbhm/unifi-cloudkey:8.4.59
+    container_name: unifi
+    hostname: unifi
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /data/unifi/var/lib/unifi:/var/lib/unifi
+    command: /etc/init.d/unifi start
+    depends_on:
+      mongodb:
+        condition: service_healthy
+

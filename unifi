@@ -14,7 +14,7 @@
 
 # Configuration and runtime variables
 WORKING_DIR=/usr/lib/unifi/
-DAEMON_USER=unifi
+DAEMON_USER=root
 DAEMON=/usr/bin/java
 DAEMON_OPTS="-Dfile.encoding=UTF-8 -Djava.awt.headless=true -Dapple.awt.UIElement=true -Dunifi.core.enabled=false -Dunifi.mongodb.service.enabled=true -XX:+ExitOnOutOfMemoryError -XX:+CrashOnOutOfMemoryError -XX:ErrorFile=/usr/lib/unifi/logs/unifi_crash.log -Xlog:gc:logs/gc.log:time:filecount=2,filesize=5M --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/sun.security.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.rmi/sun.rmi.transport=ALL-UNNAMED -jar /usr/lib/unifi/lib/ace.jar start"
 PIDFILE=/var/run/unifi/unifi.pid
