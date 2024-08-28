@@ -1,0 +1,42 @@
+#!/bin/bash
+
+echo "Disabling stock Unifi and database..."
+systemctl disable unifi && systemctl stop unifi
+systemctl disable mongodb && systemctl stop mongodb
+echo "Done"
+
+echo "Backing up repo lists and installing new ones..."
+mv /etc/apt/sources.list /etc/apt/sources.list.old
+mv /etc/apt/sources.list.d /etc/apt/sources.list.d.old
+echo 'deb https://download.docker.com/linux/debian jessie stable' > /etc/apt/sources.list
+echo 'deb [ arch=amd64,arm64 ] https://www.ui.com/downloads/unifi/debian stable ubiquiti' >> /etc/apt/sources.list
+echo 'deb http://archive.debian.org/debian-security jessie/updates main contrib non-free' >> /etc/apt/sources.list
+echo 'deb http://archive.debian.org/debian/ jessie main contrib non-free' >> /etc/apt/sources.list
+echo "Done"
+
+echo "Updating apt and installing Docker and dependencies..."
+apt update && apt install docker-ce
+echo "Done"
+
+echo "Downgrading Docker to working version and installing docker-compose..."
+wget https://download.docker.com/linux/debian/dists/jessie/pool/stable/armhf/docker-ce_18.06.1~ce~3-0~debian_armhf.deb
+dpkg -i docker-ce_18.06.1~ce~3-0~debian_armhf.deb
+wget https://download.docker.com/linux/debian/dists/buster/pool/stable/armhf/docker-compose-plugin_2.6.0~debian-buster_armhf.deb
+dpkg -i docker-compose-plugin_2.6.0~debian-buster_armhf.deb
+ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/
+echo "Done"
+
+echo "Making changes to host system webui to support new Unifi version in Docker..."
+usermod -a -G docker www-data
+cp /usr/share/cloudkey-webui/www/common.inc /usr/share/cloudkey-webui/www/common.inc.bak
+sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
+sed -i 's/^exit 0$/touch \/var\/run\/unifi_runtime.cfg\nexit 0/g' /etc/rc.local
+echo "Done"
+
+echo "Building Docker image - this will probably take a while..."
+docker build -t agreenbhm/unifi-cloudkey:8.4.59 --network host .
+echo "Done"
+
+echo "Starting containers..."
+docker-compose up -d
+echo "Finished!"
