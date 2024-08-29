@@ -1,0 +1,827 @@
+#!/bin/sh
+# Ubiquiti appliance system tools                -*- shell-script -*-
+# Copyright (c) 2012-2015 Ubiquiti Networks, Inc. http://www.ubnt.com
+# vim: ft=sh
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+SYS_LED=/sys/class/leds
+LEDS_WHITE=${LEDS_WHITE:-"$SYS_LED/white $SYS_LED/rack:white"}
+LEDS_BLUE=${LEDS_BLUE:-"$SYS_LED/blue $SYS_LED/rack:blue"}
+
+usage() {
+	echo "Ubiquiti system tools, v1.0"
+	echo "Usage: $0 <command> [<arguments>]"
+	echo "  supported commands:"
+	echo "     timezone <newtimezone>"
+	echo "     hostname <newhostname>"
+	echo "     network  <networkinterfacefile>"
+	echo "     fwupdate <updatefile>"
+	echo "     fwupdatestatus"
+	echo "     resetbutton <true|false>"
+	echo "     sshd <true|false>"
+	echo "     sshd-authkeys [<new authkey file>]"
+	echo "     sshd-passwdauth [<true|false>]"
+	echo "     sshd-port [<port number>]"
+	echo "     supportinfo [<outputfile>]"
+	echo "     pwcheck"
+	echo "     chpasswd"
+	echo "     adminname <newname>"
+	echo "     adminemail <newemail>"
+	echo "     reboot"
+	echo "     poweroff"
+	echo "     reset2defaults"
+	echo "     cleanup"
+	echo "     led  <ledname> <action> <action-arg1> <action-arg2> <action-arg3>"
+
+	exit 1
+}
+
+# prints error message and exits the process with the given error code
+# args: <exit code> <message>
+err() {
+	local rc msg
+	rc=$1
+	shift
+	msg=$*
+	printf "ERROR: ${msg}\n"
+	exit ${rc}
+}
+
+internal_cleanup() {
+	if [ -n "${CLEANUP_FILES}" ]; then
+		rm -f ${CLEANUP_FILES}
+	fi
+	for d in ${CLEANUP_DIRS}; do
+		[ -d "$d" ] && rm -rf $d;
+	done
+	if command -v dotlockfile >/dev/null 2>&1; then
+		for f in ${CLEANUP_LOCKFILES}; do
+			dotlockfile -u $f;
+		done
+	fi
+}
+
+cleanup_init() {
+	CLEANUP_FILES=
+	CLEANUP_LOCKFILES=
+	CLEANUP_DIRS=
+}
+
+# args: <directory>
+cleanup_add_dir() {
+	CLEANUP_DIRS="${CLEANUP_DIRS} $1"
+}
+
+# args: <file path>
+cleanup_add_file() {
+	CLEANUP_FILES="${CLEANUP_FILES} $1"
+}
+
+# args: <file path>
+cleanup_add_lockfile() {
+	CLEANUP_LOCKFILES="${CLEANUP_LOCKFILES} $1"
+}
+
+copy_file() {
+	if [ -f "$1" ]; then
+		cp -f $1 $2
+	else
+		return 1
+	fi
+}
+
+# moves the given source file to destination via "atomic" rename fashion
+# args: <source file> <destination>
+move_file() {
+	local ddir
+	if [ -d "$2" ]; then
+		ddir="$2"
+	else
+		ddir=$(dirname "$2")
+	fi
+	local tfile=$(mktemp -p "${ddir}" "${1}.XXXXXX")
+	cleanup_add_file "${tfile}"
+	mv -f "$1" "${tfile}"
+	mv -f "${tfile}" "$2"
+}
+
+change_admin() {
+	local LOCKFILE field
+	local newadmin newadminuid
+	local oldadmin oldadminuid
+	local invalidformat rc
+	local usermaptmpf shadowtmpf passwdtmpf
+	LOCKFILE="/run/lock/chadmin"
+	field=$1
+	newadmin=$2
+
+	cleanup_init
+
+	if [ "${field}" != "name" -a "${field}" != "email" ]; then
+		return 0
+	fi
+
+	if [ ${#newadmin} -gt 32 ]; then
+		err 1 "${newadmin} is too long (max len:32) !"
+	fi
+
+	invalidformat=1
+	if [ "${field}" != "email" ]; then
+		expr match "${newadmin}" "^[a-zA-Z][-a-zA-Z0-9_]*$" >/dev/null 2>&1
+		invalidformat=$?
+	else
+		expr match "${newadmin}" "^[a-zA-Z][-a-zA-Z0-9_@.+%]*[-a-zA-Z0-9_]$" >/dev/null 2>&1
+		invalidformat=$?
+	fi
+
+	if [ "${newadmin}" = "" -o "${newadmin}" = "root" -o ${invalidformat} -ne 0 ]; then
+		err 1 "invalid format: ${newadmin} !"
+	fi
+
+	dotlockfile -l -p -r 1 ${LOCKFILE}
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		err 1 "cannot aquire lock file (${LOCKFILE}) !"
+	fi
+	cleanup_add_lockfile ${LOCKFILE}
+
+	if [ "${field}" != "email" ]; then
+		oldadmin=$(awk -F: '/root/{if ($1 != "root") print $1}' /etc/security/usermap.conf | sed -n '1p')
+	else
+		oldadmin=$(awk -F: '/root/{if ($1 != "root") print $1}' /etc/security/usermap.conf | sed -n '2p')
+	fi
+
+	if [ "${oldadmin}" = "" ]; then
+		return 0
+	fi
+
+	if [ "${newadmin}" = "${oldadmin}" ]; then
+		err 1 "new admin (${newadmin}) is the same as old admin (${oldadmin}) !"
+	fi
+
+	oldadminuid=$(id -u ${oldadmin} 2>/dev/null)
+	if [ "${oldadminuid}" != "" ]; then
+		if [ ${oldadminuid} -gt 0 ]; then
+			err 1 "current admin (${oldadmin}) exists with non-zero UID (${oldadminuid}) !"
+		fi
+	fi
+
+	newadminuid=$(id -u ${newadmin} 2>/dev/null)
+	if [ "${newadminuid}" != "" ]; then
+		err 1 "new admin (${newadmin}) already exists with UID: ${newadminuid} !"
+	fi
+
+	usermaptmpf=`mktemp usermap.XXXXXXXX`
+	cleanup_add_file "${usermaptmpf}"
+
+	sed "s,^${oldadmin}:,${newadmin}:,g" /etc/security/usermap.conf > ${usermaptmpf}
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		err 1 "replace ${oldadmin} with ${newadmin} in /etc/security/usermap.conf failed!"
+	fi
+
+	if [ "${oldadminuid}" = "" ]; then
+		# use useradd command to add newadmin if oldadmin doesn't exist in the system
+		useradd -o -d /root -g 0 -u 0 -s /bin/bash ${newadmin}
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			err 1 "replace ${oldadmin} with ${newadmin} in /etc/shadow failed!"
+		fi
+	else
+		# replace oldadmin with newadmin in /etc/shadow and /etc/shadow
+		shadowtmpf=`mktemp shadow.XXXXXXXX`
+		cleanup_add_file "${shadowtmpf}"
+
+		sed "s,^${oldadmin}:,${newadmin}:,g" /etc/shadow > ${shadowtmpf}
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			err 1 "replace ${oldadmin} with ${newadmin} in /etc/shadow failed!"
+		fi
+
+		passwdtmpf=`mktemp passwd.XXXXXXXX`
+		cleanup_add_file "${passwdtmpf}"
+
+		sed "s,^${oldadmin}:,${newadmin}:,g" /etc/passwd > ${passwdtmpf}
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			err 1 "replace ${oldadmin} with ${newadmin} in /etc/passwd failed!"
+		fi
+		mv ${shadowtmpf} /etc/shadow && chmod 640 /etc/shadow
+		mv ${passwdtmpf} /etc/passwd && chmod 644 /etc/passwd
+	fi
+
+	mv ${usermaptmpf} /etc/security/usermap.conf && chmod 644 /etc/security/usermap.conf
+
+	dotlockfile -u ${LOCKFILE}
+	return 0
+}
+
+change_timezone() {
+	tzname=$1
+	tzfile="/usr/share/zoneinfo/$1"
+	if [ -f $tzfile ]; then
+		if ! timedatectl set-timezone "${tzname}"; then
+			rm -f /etc/localtime
+			cp -f $tzfile /etc/localtime
+			echo "$tzname" > /etc/timezone
+		fi
+	else
+		err 1 "Timezone $tzname does not exist."
+	fi
+}
+
+change_hostname() {
+	echo "$1" > /etc/hostname
+	echo "$1" > /proc/sys/kernel/hostname
+	local HLINE="127.0.1.1	${1}"
+	if grep -q 127.0.1.1 /etc/hosts 2>/dev/null; then
+		sed -i "s/^127.0.1.1.*/${HLINE}/" /etc/hosts
+	else
+		echo "$HLINE" >> /etc/hosts
+	fi
+}
+
+change_network_ifupdown() {
+	if [ -f "$1" ]; then
+		if diff -q $1 /etc/network/interfaces >/dev/null 2>&1; then
+			echo "no changes, skipping update"
+		else
+			ifdown -a -X lo
+			copy_file $1 /etc/network/interfaces
+			ifup -a
+		fi
+	else
+		err 2 "File not found: $1"
+	fi
+}
+
+# args: <systemd service> <new service file>
+change_network_systemd() {
+	if [ ! -f "$2" ]; then
+		err 2 "File not found: $2"
+	fi
+
+	if diff -q $2 /etc/systemd/network/$1 >/dev/null 2>&1; then
+		echo "no changes, skipping update"
+	else
+		copy_file $2 /etc/systemd/network/$1
+		chmod 0644 /etc/systemd/network/$1
+		systemctl restart systemd-networkd
+		systemctl restart systemd-networkd-fallbacker@${1%.network}
+	fi
+}
+
+change_network() {
+	# TODO: is /run/systemd/netif sufficient indicator?
+	if [ -d /run/systemd/netif ]; then
+		change_network_systemd eth0.network $1
+	else
+		change_network_ifupdown $1
+	fi
+}
+
+do_resetbutton() {
+	local CFGFILE=/etc/default/infctld
+	local VAL=enabled
+	[ -f "${CFGFILE}" ] || (touch "${CFGFILE}"; chmod go+r "${CFGFILE}")
+	. "${CFGFILE}"
+	# cleanup leading whitespace
+	INFCTLD_ARGS=${INFCTLD_ARGS#"${INFCTLD_ARGS%%[![:space:]]*}"}
+	# -n indicates that reset button is disabled
+	[ "${INFCTLD_ARGS#*-n}" != "${INFCTLD_ARGS}" ] && VAL=disabled
+
+	if [ $# -eq 0 ]; then
+		echo $VAL
+	else
+		local NEWVAL=enabled
+		[ "$1" = "false" -o "$1" = "no" -o "$1" = "disable" ] && NEWVAL=disabled
+
+		[ "${NEWVAL}" = "${VAL}" ] && return
+
+		tmpfile=$(mktemp infctld.XXXXXXXX)
+
+		if [ "$NEWVAL" = "disabled" ]; then
+			sed '/INFCTLD_ARGS/d' "${CFGFILE}" > ${tmpfile}
+			printf "INFCTLD_ARGS=\"${INFCTLD_ARGS} -n\"" >> ${tmpfile}
+		else
+			sed '/INFCTLD_ARGS/ s/\-n//g' "${CFGFILE}" > ${tmpfile}
+		fi
+		mv ${tmpfile} ${CFGFILE}
+		service infctld restart
+	fi
+}
+
+do_sshd() {
+	local VAL=enabled
+	systemctl -q is-enabled ssh || VAL=disabled
+	if [ $# -eq 0 ]; then
+		echo $VAL
+	else
+		local NEWVAL=enabled
+		[ "$1" = "false" -o "$1" = "no" -o "$1" = "disable" ] && NEWVAL=disabled
+		[ "${NEWVAL}" = "${VAL}" ] && return
+		if [ "$NEWVAL" = "disabled" ]; then
+			systemctl disable ssh
+			systemctl --no-block stop ssh || true
+		else
+			systemctl enable ssh
+			systemctl --no-block restart ssh
+		fi
+	fi
+}
+
+do_ssh() {
+	do_sshd $@
+}
+
+SSHD_CONFIGDIR=${SSHD_CONFIGDIR:-/etc/ssh}
+SSHD_CONFIG="${SSHD_CONFIGDIR}/sshd_config"
+
+# args: [<port>]
+do_sshdport() {
+	local VAL
+	VAL=$(sed -n '/^[ \t]*#/d; s/^[ \t]*Port[ \t]*\([0-9]*\)[ \t]*/\1/p' "${SSHD_CONFIG}")
+	[ -n "${VAL}" ] || VAL=22
+
+	if [ $# -eq 0 ]; then
+		echo $VAL
+	else
+		[ "$1" != "${VAL}" ] || return
+		[ "$1" -gt 0 -a "$1" -lt 65536 ] 2>/dev/null || err 1 "Invalid port number: $1"
+
+		# TODO: more explicit locks
+
+		local sshdcfg=$(mktemp sshd_config.XXXXXXXX)
+		cleanup_init
+		cleanup_add_file ${sshdcfg}
+
+		sed '/^[ \t]*Port[ \t]/d' "${SSHD_CONFIG}" > "${sshdcfg}"
+		printf "Port $1\n" >> "${sshdcfg}"
+
+		if sshd -t -f "${sshdcfg}"; then
+			move_file "${sshdcfg}" "${SSHD_CONFIG}"
+			if systemctl -q is-enabled ssh; then
+				systemctl --no-block restart ssh
+			fi
+		fi
+	fi
+}
+
+# args: [<enable|disable>]
+do_sshdpasswdauth() {
+	local VAL
+	VAL=$(sed -n '/^[ \t]*#/d; s/^[ \t]*PasswordAuthentication[ \t]*\([^\s]*\)[ \t]*/\1/p' "${SSHD_CONFIG}")
+	[ -n "${VAL}" ] || VAL=yes
+
+	if [ $# -eq 0 ]; then
+		if [ "$VAL" = "yes" ]; then
+			echo "enabled"
+		else
+			echo "disabled"
+		fi
+	else
+		local NEWVAL=yes
+		[ "$1" = "false" -o "$1" = "no" -o "$1" = "disable" ] && NEWVAL=no
+		[ "${NEWVAL}" = "${VAL}" ] && return
+
+		# TODO: more explicit locks
+		local sshdcfg=$(mktemp sshd_config.XXXXXXXX)
+		cleanup_init
+		cleanup_add_file ${sshdcfg}
+
+		sed '/^[ \t]*PasswordAuthentication[ \t]/d' "${SSHD_CONFIG}" > ${sshdcfg}
+		printf "PasswordAuthentication ${NEWVAL}\n" >> ${sshdcfg}
+
+		if sshd -t -f ${sshdcfg}; then
+			move_file ${sshdcfg} "${SSHD_CONFIG}"
+			if systemctl -q is-enabled ssh; then
+				systemctl --no-block restart ssh
+			fi
+		fi
+	fi
+}
+
+SSHD_AUTHKEYDIR=${SSHD_AUTHKEYDIR:-/root/.ssh}
+SSHD_AUTHKEYS="${SSHD_AUTHKEYDIR}/authorized_keys"
+
+# args: [<new file>]
+do_sshdauthkeys() {
+	umask 022
+	[ -e "${SSHD_AUTHKEYS}" ] || (mkdir -p "${SSHD_AUTHKEYDIR}" && touch "${SSHD_AUTHKEYS}")
+	if [ $# -eq 0 ]; then
+		cat "${SSHD_AUTHKEYS}"
+	else
+		[ -f "$1" ] || err 1 "not a regular file: $1"
+		move_file "$1" "${SSHD_AUTHKEYS}"
+	fi
+}
+
+# args: [<output file>]
+do_supportinfo() {
+	local CFGFILE=/etc/default/supportinfo
+	local TMPDIR=${TMPDIR:-/var/tmp}
+	local supportdir basedir hwid dateid
+	if [ -r "${CFGFILE}" ]; then . "${CFGFILE}"; fi
+	cleanup_init
+
+	umask 0077
+	basedir=$(mktemp -d supportinfo.XXXXXXXX -p "${TMPDIR}")
+
+	if [ ! -d "${basedir}" ]; then
+		err 1 "Couldn't create temporary directory"
+	fi
+
+	cleanup_add_dir "${basedir}"
+
+	hwid=$(hwaddr 2>/dev/null | sed 's/://g')
+	dateid=$(date -Is)
+	supportdir="${basedir}/support-${hwid}-${dateid}"
+
+	if ! mkdir -p "${supportdir}"; then
+		err 2 "Couldn't create support info directory"
+	fi
+
+	journalctl --system --all --no-pager --no-hostname --output=short-iso > "${supportdir}"/journal.txt
+	systemctl -a --no-pager list-units > "${supportdir}"/systemd-units.txt
+	dpkg-query -W -f='${db:Status-Abbrev} ${Package}\t${Version}\n' > "${supportdir}"/package-list.txt
+	curl -s http://127.0.0.1:9090/system -o "${supportdir}"/sysinfo.txt
+
+	run-parts -u 0077 -a "${supportdir}" /usr/etc/supportinfo.d >/dev/null 2>&1 || true
+	run-parts -u 0077 -a "${supportdir}" /etc/supportinfo.d >/dev/null 2>&1 || true
+
+	local targetfile=${1:-"${TMPDIR}/support-${hwid}-${dateid}.tar.gz"}
+	tar -C "${basedir}" -zcf "${targetfile}" .
+	printf "Support information stored in: ${targetfile}\n"
+
+	rm -rf "${basedir}"
+}
+
+set_fwupdate_status() {
+	local statusfile status
+	statusfile=$1
+	shift
+	status=$*
+	echo ${status} > ${statusfile}
+}
+
+fw_move() {
+	local file rc
+	file=$1
+
+	[ "/boot/fwupdate.bin" != "${file}" ] || return 0
+
+	if mountpoint -q /boot >/dev/null 2>&1; then
+		mount -o remount,rw /boot || true
+	fi
+
+	mv -f "${file}" /boot/fwupdate.bin
+	rc=$?
+
+	if mountpoint -q /boot >/dev/null 2>&1; then
+		mount -o remount,ro /boot || true
+	fi
+
+	return $rc
+}
+
+do_fwupdatestatus() {
+	local LOCKFILE PID STATUSFILE
+	LOCKFILE="/var/run/fwupdate.pid"
+	dotlockfile -l -p -r 0 ${LOCKFILE}
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		PID=$(cat ${LOCKFILE})
+		STATUSFILE="/var/run/fwupdate.status.${PID}"
+		[ ! -f ${STATUSFILE} ] || cat ${STATUSFILE}
+		return 0
+	fi
+	dotlockfile -u ${LOCKFILE}
+	echo "none"
+	return 1
+}
+
+do_fwupdate() {
+	local file ver rc LOCKFILE
+	if [ -z "${1}" ]; then
+		err 2 "No update file!"
+	fi
+
+	local keepfile=0
+	if [ ! -z "${2}" -a "${2}" = "-k" ]; then
+		keepfile=1
+	fi
+
+	local LOCKFILE="/var/run/fwupdate.pid"
+	dotlockfile -l -p -r 0 ${LOCKFILE}
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		err 1 "cannot aquire lock file (${LOCKFILE}) !"
+	fi
+
+	cleanup_init
+	cleanup_add_lockfile ${LOCKFILE}
+
+	local PID=$$
+	local STATUSFILE="/var/run/fwupdate.status.${PID}"
+	echo ${PID}
+
+	if [ -e "${1}" ]; then
+		file="${1}"
+	else
+		local wget_cmd curl_cmd
+		wget_cmd=$(command -v wget 2>/dev/null)
+		curl_cmd=$(command -v curl 2>/dev/null)
+
+		[ -n "${wget_cmd}" -o -n "${curl_cmd}" ] || err 6 "Cannot retrieve non-local firmware ${1} (missing wget/curl)!"
+		[ -n "${TMPDIR}" ] || TMPDIR=/var/tmp
+		mkdir -p "${TMPDIR}" || err 6 "Cannot create directory ${TMPDIR}!"
+		rm -f ${TMPDIR}/fwupdate.* >/dev/null 2>&1
+		file=$(mktemp -p "${TMPDIR}" fwupdate.XXXXXXXXXX)
+		rc=0
+		set_fwupdate_status ${STATUSFILE} "downloading"
+		if [ -n "${wget_cmd}" ]; then
+			${wget_cmd} -O "${file}" -t 5 "${1}"
+			rc=$?
+		elif [ -n "${curl_cmd}" ]; then
+			${curl_cmd} -o "${file}" "${1}"
+			rc=$?
+		else
+			# should never get here..
+			rc=69
+		fi
+
+		if [ $rc -ne 0 ]; then
+			rm -f ${file}
+			set_fwupdate_status ${STATUSFILE} "failed"
+			err 3 "Failed downloading firmware from ${1}, rc: ${rc}"
+		fi
+	fi
+
+	[ ${keepfile} -eq 1 ] || cleanup_add_file "${file}"
+
+	set_fwupdate_status ${STATUSFILE} "checking"
+	if command -v fwinfo >/dev/null 2>&1; then
+		ver=$(fwinfo ${file})
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			set_fwupdate_status ${STATUSFILE} "invalid"
+			err 9 "Invalid firmware file ${file}!\n"
+		fi
+	fi
+
+	if command -v fwupdate >/dev/null 2>&1; then
+		fwupdate -c ${file}
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			set_fwupdate_status ${STATUSFILE} "invalid"
+			err 10 " ${file} (Firmware: ${ver}) doesn't fit the system!\n"
+		fi
+	fi
+
+	echo "Firmware: ${ver}"
+
+	set_fwupdate_status ${STATUSFILE} "moving"
+	fw_move "${file}"
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		set_fwupdate_status ${STATUSFILE} "failed"
+		err 8 "Failed moving ${file} to /boot/fwupdate.bin"
+	fi
+
+	set_fwupdate_status ${STATUSFILE} "updating"
+	echo "Firmware ready - rebooting to update..."
+	dotlockfile -u ${LOCKFILE}
+	do_reboot
+}
+
+do_pwcheck() {
+	exec pwcheck $*
+}
+
+do_chpasswd() {
+	exec chpasswd $*
+}
+
+do_reboot() {
+	reboot || reboot -f
+}
+
+do_poweroff() {
+	poweroff || poweroff -f
+}
+
+led_off() {
+	local led=$1
+	echo none > ${led}/trigger
+	echo 0 > ${led}/brightness
+}
+
+leds_reset2defaults() {
+	if command -v sysled >/dev/null 2>&1; then
+		sysled reset2defaults
+	else
+		for led in ${LEDS_BLUE}; do
+			if [ -d ${led} ]; then
+				led_off ${led}
+			fi
+		done
+		for led in ${LEDS_WHITE}; do
+			if [ -d ${led} ]; then
+				echo 0 > ${led}/brightness
+				echo timer > ${led}/trigger
+				cat ${led}/max_brightness > ${led}/brightness
+				# ~3 flashes in 2 seconds
+				echo 50 > ${led}/delay_on
+				echo 610 > ${led}/delay_off
+			fi
+		done
+	fi
+}
+
+do_reset2defaults() {
+	if [ -x /sbin/pre-reset2defaults ]; then
+		/sbin/pre-reset2defaults
+	fi
+	if mountpoint -q /boot >/dev/null 2>&1; then
+		mount -o remount,rw /boot
+	fi
+	touch /boot/reset2defaults
+	journalctl --system --all --no-pager --no-hostname --output=short-iso > /boot/reset2defaults.log
+	pstree -hp >> /boot/reset2defaults.log
+	sync
+	if mountpoint -q /boot >/dev/null 2>&1; then
+		mount -o remount,ro /boot
+	fi
+	if [ -f /boot/reset2defaults ]; then
+		leds_reset2defaults
+		do_reboot
+	fi
+}
+
+session_cleanup() {
+	PHP_SESSIONDIR=/run/php/sessions
+	PHP_TMPDIR=/run/php/tmp
+
+	[ -e /etc/default/php ] && . /etc/default/php
+
+	[ -d "${PHP_SESSIONDIR}" ] || return 0
+
+	find "${PHP_SESSIONDIR}" -type f -name 'sess_*' | xargs grep -l 'authed|b:1' | xargs touch
+	ls -c -r -1 ${PHP_SESSIONDIR}/ | head -n -5 | xargs rm -f
+}
+
+aufs_plink_flush() {
+	[ -x /sbin/auplink ] || return 0
+	AUFS_MNTS=`mount -t aufs | awk '{print $3}'`
+	if [ "${AUFS_MNTS}" != "" ]; then
+		for MNT in ${AUFS_MNTS}; do
+			/sbin/auplink ${MNT} flush
+		done
+	fi
+}
+
+do_cleanup_hourly() {
+	session_cleanup
+}
+
+do_cleanup_daily() {
+	aufs_plink_flush
+}
+
+do_cleanup_weekly() {
+	return 0
+}
+
+do_cleanup_monthly() {
+	return 0
+}
+
+do_cleanup_yearly() {
+	return 0
+}
+
+# args: <ledname> <action> <action-arg1> <action-arg2> <action-arg3>
+# ledname = `ls /sys/class/leds/`
+# action = on | off | settimer
+# when action == on
+#   action-arg1 = brightness (optional, max_brightness is taken when it's not provided)
+# when action == settimer:
+#   action-arg1 = delay_on
+#   action-arg2 = delay_off
+#   action-arg3 = brightness (optional, max_brightness is taken when it's not provided)
+do_led() {
+	local color=${1}
+	local action=${2}
+	local leds
+
+	case "${color}" in
+		blue)
+			leds=${LEDS_BLUE}
+			;;
+		white)
+			leds=${LEDS_WHITE}
+			;;
+		*)
+			err 2 "Unsupported LED color '${color}'"
+			;;
+	esac
+
+	for led in ${leds}; do
+		if [ ! -d "${led}" ]; then
+			err 2 "LED '${led}' not found!"
+		fi
+
+		case "${action}" in
+			off)
+				led_off ${led}
+				;;
+			on)
+				local brightness=${3:-$(cat ${led}/max_brightness)}
+
+				echo none > ${led}/trigger
+				echo ${brightness} > ${led}/brightness
+				;;
+			settimer)
+				if [ -z "${3}" ]; then
+					err 2 "LED delay_on is missing!"
+				fi
+				local delay_on=${3}
+
+				if [ -z "${4}" ]; then
+					err 2 "LED delay_off is missing!"
+				fi
+				local delay_off=${4}
+
+				local brightness=${5:-$(cat ${led}/max_brightness)}
+
+				led_off ${led}
+				echo ${brightness} > ${led}/brightness
+				echo timer > ${led}/trigger
+				echo ${delay_on} > ${led}/delay_on
+				echo ${delay_off} > ${led}/delay_off
+				;;
+			*)
+				if [ ! -f "${led}/${action}" ]; then
+					err 2 "LED action (${action}) not supported!"
+				fi
+
+				if [ -z "${3}" ]; then
+					cat "${led}/${action}"
+				else
+					echo "${3}" > "${led}/${action}"
+				fi
+				;;
+		esac
+	done
+}
+
+[ $# -lt 1 ] && usage
+
+CMD=$1
+
+trap 'internal_cleanup' EXIT HUP INT
+
+case ${CMD} in
+	timezone|hostname|network)
+		[ $# -lt 2 ] && usage
+		do_cmd="change_${CMD}"
+		eval ${do_cmd} $2
+	;;
+	adminname)
+		[ $# -lt 2 ] && usage
+		eval change_admin name $2
+	;;
+	adminemail)
+		[ $# -lt 2 ] && usage
+		eval change_admin email $2
+	;;
+	pwcheck|chpasswd|resetbutton|fwupdate|led|ssh|sshd|sshd-port|sshd-passwdauth|sshd-authkeys|supportinfo)
+		cmdname=$(echo $CMD | tr -d '-')
+		do_cmd="do_${cmdname}"
+		shift
+		eval ${do_cmd} $@
+	;;
+	reboot|poweroff|reset2defaults|fwupdatestatus)
+		do_cmd="do_${CMD}"
+		eval ${do_cmd}
+	;;
+	cleanup)
+		if [ $# -ge 2 ] ; then
+			case $2 in
+				hourly|daily|weekly|monthly|yearly)
+				do_cmd="do_cleanup_$2"
+				eval ${do_cmd}
+				;;
+			*)
+				usage
+				;;
+			esac
+		else
+			do_cmd="do_cleanup_hourly"
+			eval ${do_cmd}
+		fi
+	;;
+	*)
+		usage
+	;;
+esac
