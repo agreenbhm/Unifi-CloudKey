@@ -31,7 +31,11 @@ usermod -a -G docker www-data
 cp /usr/share/cloudkey-webui/www/common.inc /usr/share/cloudkey-webui/www/common.inc.bak
 cp /usr/share/cloudkey-webui/www/settings.inc /usr/share/cloudkey-webui/www/settings.inc.bak
 cp /usr/share/cloudkey-webui/www/api.inc /usr/share/cloudkey-webui/www/api.inc.bak
-sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
+
+#checking version via the mongodb container so version is still available if the unifi package is stopped
+# Known Issue - the Maintenance page might show the service as stopped for an extended length of time after clicking 'Start' as it takes a while for the container to start
+#sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
+sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t mongodb dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
 sed -i 's/^exit 0$/touch \/var\/run\/unifi_runtime.cfg\nexit 0/g' /etc/rc.local
 sed -i "s/.*CMD_SERVICE_UNIFI.*/define('CMD_SERVICE_UNIFI', '\/usr\/bin\/docker ');/g" /usr/share/cloudkey-webui/www/settings.inc
 sed -i "s/exec(CMD_SERVICE_UNIFI . ' start', \$out, \$rc);/exec(CMD_SERVICE_UNIFI . ' start unifi', \$out, \$rc);/g" /usr/share/cloudkey-webui/www/api.inc
