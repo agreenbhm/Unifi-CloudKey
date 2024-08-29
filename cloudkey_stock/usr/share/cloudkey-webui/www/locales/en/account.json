@@ -1,0 +1,38 @@
+{
+  "ACCOUNT_LOGIN_HEADLINE_LOGIN": "Login",
+  "ACCOUNT_LOGIN_LABEL_USERNAME": "Username",
+  "ACCOUNT_LOGIN_LABEL_PASSWORD": "Password",
+  "ACCOUNT_LOGIN_ACTIONS_LOGIN": "Login",
+  "ACCOUNT_LOGIN_LINK_FORGOT_PASSWORD": "Forgot password",
+
+  "ACCOUNT_NOTICE_LOGIN_ERROR_TITLE": "Login error",
+  "ACCOUNT_NOTICE_LOGIN_INVALID_ERROR": "Invalid username and/or password.",
+  "ACCOUNT_NOTICE_LOGIN_REQUIRED_ERROR": "You must be logged in to access that page. Please log in below.",
+
+  "ACCOUNT_CHANGE_PASSWORD": "Change password",
+  "ACCOUNT_CHANGE_PASSWORD_CANCEL": "Cancel",
+  "ACCOUNT_CHANGE_PASSWORD_SUBMIT": "Submit",
+  "ACCOUNT_CONFIRM_PASSWORD": "Confirm password",
+  "ACCOUNT_OLD_PASSWORD": "Old password",
+  "ACCOUNT_NEW_PASSWORD": "New password",
+
+  "ACCOUNT_PASSWORD_TOO_SHORT": "Password is too short.",
+  "ACCOUNT_PASSWORD_MATCH": "Password mismatch.",
+  "ACCOUNT_PASSWORD_NOT_CHANGED": "Password is the same as old.",
+  "ACCOUNT_PASSWORD_DEFAULT": "Default password should not be used.",
+
+  "ACCOUNT_CHANGING_PASSWORD": "Changing password...",
+  "ACCOUNT_CHANGE_PASSWORD_SUCCESS": "Password changed successfully.",
+  "ACCOUNT_CHANGE_PASSWORD_ERROR": "Cannot change password.",
+
+  "ACCOUNT_DEFAULT_PASSWORD_WARNING" : "Using default password is not safe. Please set new password.",
+
+  "ACCOUNT_CHANGE_USERNAME": "Change username",
+  "ACCOUNT_NEW_USERNAME" : "New username",
+  "ACCOUNT_CHANGE_USERNAME_CANCEL": "Cancel",
+  "ACCOUNT_CHANGE_USERNAME_SUBMIT": "Submit",
+  "ACCOUNT_CHANGE_USERNAME_SUBMIT_ERROR": "Username can contain upper and lower letters, numbers and underscore.",
+  "ACCOUNT_CHANGING_USERNAME": "Changing username...",
+  "ACCOUNT_CHANGE_USERNAME_SUCCESS": "Username changed successfully.",
+  "ACCOUNT_CHANGE_USERNAME_ERROR": "Cannot change username."
+}
