@@ -12,7 +12,12 @@
 - Fix Unifi Version check
 	- `usermod -a -G docker www-data`
 	- `sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc`
+- Fix webui start/stop
+	- `sed -i "s/.*CMD_SERVICE_UNIFI.*/define('CMD_SERVICE_UNIFI', '\/usr\/bin\/docker ');/g" /usr/share/cloudkey-webui/www/settings.inc
 
+	* `sed -i "s/exec(CMD_SERVICE_UNIFI . ' start', \$out, \$rc);/exec(CMD_SERVICE_UNIFI . ' start unifi', \$out, \$rc);/g" /usr/share/cloudkey-webui/www/api.inc
+
+	* `sed -i "s/exec(CMD_SERVICE_UNIFI . ' stop', \$out, \$rc);/exec(CMD_SERVICE_UNIFI . ' stop unifi', \$out, \$rc);/g" /usr/share/cloudkey-webui/www/api.inc`
  - Install Docker
 	* `apt update && apt install docker-ce`
 
