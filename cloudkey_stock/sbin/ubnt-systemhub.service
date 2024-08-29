@@ -1,0 +1,10 @@
+[Unit]
+Description=UBNT SystemHub
+
+[Service]
+Type=notify
+Restart=always
+ExecStart=/usr/sbin/ubnt-systemhub
+
+[Install]
+WantedBy=multi-user.target
