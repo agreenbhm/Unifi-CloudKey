@@ -30,6 +30,8 @@ server {
 		try_files $uri =404;
 		fastcgi_split_path_info ^(.+\.php)(/.+)$;
 		fastcgi_pass unix:/var/run/php5-fpm.sock;
+		# replace above with below for modern php
+		#fastcgi_pass unix:/var/run/php/php-fpm.sock;
 		fastcgi_index index.php;
 		include /etc/nginx/fastcgi.conf;
 	}
@@ -83,6 +85,8 @@ server {
 		try_files $uri =404;
 		fastcgi_split_path_info ^(.+\.php)(/.+)$;
 		fastcgi_pass unix:/var/run/php5-fpm.sock;
+		# replace above with below for modern php
+		#fastcgi_pass unix:/var/run/php/php-fpm.sock;
 		fastcgi_index index.php;
 		include /etc/nginx/fastcgi.conf;
 	}
