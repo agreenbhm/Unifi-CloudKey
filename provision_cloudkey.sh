@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$EUID" -ne 0 ]
+then
+	echo "Please re-run with root privileges."
+	exit
+fi
+
 mode="$1"
 
 # Info messages in yellow
@@ -107,6 +113,4 @@ info "Starting containers..."
 docker-compose up -d
 success "Finished!"
 
-error "Need to reboot. Press enter to continue or ctrl+c to exit.".
-read reboot
-reboot
+error "Need to reboot. Please do so manually."
