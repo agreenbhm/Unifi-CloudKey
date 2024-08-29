@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$EUID" -ne 0]
+if [ "$EUID" -ne 0 ]
 then
 	echo "Please re-run with root privileges."
 	exit
