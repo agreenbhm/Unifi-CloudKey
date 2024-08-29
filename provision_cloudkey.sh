@@ -99,7 +99,13 @@ cp /usr/share/cloudkey-webui/www/settings.inc /usr/share/cloudkey-webui/www/sett
 cp /usr/share/cloudkey-webui/www/api.inc /usr/share/cloudkey-webui/www/api.inc.bak
 #sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
 sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t mongodb dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
-sed -i 's/^exit 0$/touch \/var\/run\/unifi_runtime.cfg\nexit 0/g' /etc/rc.local
+echo '@reboot touch /var/run/unifi_runtime.cfg' >> /var/spool/cron/crontabs/root
+# if [ ! -f "/etc/rc.local" ]
+# then
+# 	echo -e '#!/bin/sh\n\nexit 0' > /etc/rc.local
+#  	chmod +x /etc/rc.local
+# fi
+#sed -i 's/^exit 0$/touch \/var\/run\/unifi_runtime.cfg\nexit 0/g' /etc/rc.local
 sed -i "s/.*CMD_SERVICE_UNIFI.*/define('CMD_SERVICE_UNIFI', '\/usr\/bin\/docker ');/g" /usr/share/cloudkey-webui/www/settings.inc
 sed -i "s/exec(CMD_SERVICE_UNIFI . ' start', \$out, \$rc);/exec(CMD_SERVICE_UNIFI . ' start unifi', \$out, \$rc);/g" /usr/share/cloudkey-webui/www/api.inc
 sed -i "s/exec(CMD_SERVICE_UNIFI . ' stop', \$out, \$rc);/exec(CMD_SERVICE_UNIFI . ' stop unifi', \$out, \$rc);/g" /usr/share/cloudkey-webui/www/api.inc
