@@ -6,8 +6,9 @@ then
 	exit
 fi
 
+dpkg --add-architecture armhf
 apt update
-apt install -yf nginx php-fpm
+apt install -yf nginx php-fpm libc6:armhf libstdc++6:armhf
 mv -f /etc/nginx /etc/nginx.old
 cp -R cloudkey_stock/etc/* /etc/
 cp -R cloudkey_stock/usr/* /usr/
