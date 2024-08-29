@@ -13,3 +13,5 @@ cp -R cloudkey_stock/etc/* /etc/
 cp -R cloudkey_stock/usr/* /usr/
 
 sed -i 's/fastcgi_pass unix:\/var\/run\/php5-fpm.sock;/fastcgi_pass unix:\/var\/run\/php\/php-fpm.sock;/g'  /etc/nginx/sites-enabled/cloudkey-webui
+
+./provision_cloudkey.sh vm
