@@ -8,7 +8,7 @@ fi
 
 dpkg --add-architecture armhf
 apt update
-apt install -yf nginx php-fpm libc6:armhf libstdc++6:armhf libpam0g:armhf libevent-2.1-7:armhf zlib1g:armhf libselinux1:armhf libcrypt1:armhf
+apt install -yf nginx php-fpm libc6:armhf libstdc++6:armhf libpam0g:armhf libevent-2.1-7:armhf zlib1g:armhf libselinux1:armhf libcrypt1:armhf libpam-modules:armhf
 ln -s /lib/arm-linux-gnueabihf/libevent-2.1.so.7 /lib/arm-linux-gnueabihf/libevent-2.0.so.5
 wget https://ftp.debian.org/debian/pool/main/g/glibc/multiarch-support_2.28-10+deb10u1_arm64.deb
 wget https://snapshot.debian.org/archive/debian/20120314T034457Z/pool/main/o/openssl/libssl1.0.0_1.0.0h-1_armhf.deb
