@@ -1,6 +1,11 @@
-UNIFI_PERSISTENT_DIR=/usr/lib/unifi
-UNIFI_DATA_DIR=${UNIFI_PERSISTENT_DIR}/data
-UNIFI_LOG_DIR=${UNIFI_PERSISTENT_DIR}/logs
-UNIFI_RUN_DIR=${UNIFI_PERSISTENT_DIR}/run
+# UNIFI_PERSISTENT_DIR=/usr/lib/unifi
+# UNIFI_DATA_DIR=${UNIFI_PERSISTENT_DIR}/data
+# UNIFI_LOG_DIR=${UNIFI_PERSISTENT_DIR}/logs
+# UNIFI_RUN_DIR=${UNIFI_PERSISTENT_DIR}/run
+# UNIFI_SSL_KEYSTORE=/etc/ssl/private/unifi.keystore.jks
+# JAVA_HOME=/usr/lib/jvm/java-17-openjdk-armhf
+UNIFI_DATA_DIR=/var/lib/unifi
+UNIFI_LOG_DIR=/var/log/unifi
+UNIFI_RUN_DIR=/var/run/unifi
 UNIFI_SSL_KEYSTORE=/etc/ssl/private/unifi.keystore.jks
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk-armhf

@@ -15,7 +15,8 @@ echo 'deb http://archive.debian.org/debian/ jessie main contrib non-free' >> /et
 echo "Done"
 
 echo "Updating apt and installing Docker and dependencies..."
-apt update && apt install docker-ce
+touch /dev/tty0
+apt update && apt -yf install docker-ce
 echo "Done"
 
 echo "Downgrading Docker to working version and installing docker-compose..."

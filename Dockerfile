@@ -42,7 +42,7 @@ COPY etc_default_unifi /etc/default/unifi
 COPY unifi /etc/init.d/unifi
 
 RUN chmod +x /etc/init.d/unifi; \
- mkdir /var/log/unifi; \
+ mkdir -p /var/log/unifi; \
  ln -sf /dev/stdout /var/log/unifi/server.log; \
  ln -sf /dev/stdout /var/log/unifi/startup.log
 

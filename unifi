@@ -28,6 +28,10 @@ NAME=unifi
 case "$1" in
   start)
     log_daemon_msg "Starting $DESC" "$NAME"
+    ln -sf /var/lib/unifi /usr/lib/unifi/data
+    ln -sf /var/log/unifi /usr/lib/unifi/logs
+    ln -sf /var/run/unifi /usr/lib/unifi/run
+
     start-stop-daemon --start --quiet --pidfile $PIDFILE --chuid $DAEMON_USER --exec $DAEMON --chdir ${WORKING_DIR} -- $DAEMON_OPTS
     if [ $? -eq 0 ]; then
       log_end_msg 0
