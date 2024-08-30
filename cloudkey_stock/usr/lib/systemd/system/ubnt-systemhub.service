@@ -4,7 +4,8 @@ Description=UBNT SystemHub
 [Service]
 Type=notify
 Restart=always
-ExecStart=/usr/sbin/ubnt-systemhub
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+ExecStart=/sbin/ubnt-systemhub
 
 [Install]
 WantedBy=multi-user.target
