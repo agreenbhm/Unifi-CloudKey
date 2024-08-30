@@ -24,6 +24,8 @@ systemctl start ubnt-systemhub
 chmod 755 /etc/ssl/private
 sed -i 's/fastcgi_pass unix:\/var\/run\/php5-fpm.sock;/fastcgi_pass unix:\/var\/run\/php\/php-fpm.sock;/g'  /etc/nginx/sites-enabled/cloudkey-webui
 sed -i 's/\$trline{0}/\$trline\[0\]/g' /usr/share/cloudkey-webui/www/common.inc
+mkdir -p /run/php/{sessions,tmp}
+chown -R www-data:www-data /run/php/{sessions,tmp}
 systemctl restart nginx
 
 if [ "$1" == "test" ]
