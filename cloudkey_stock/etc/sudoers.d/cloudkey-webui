@@ -1,0 +1,1 @@
+www-data ALL=NOPASSWD:/sbin/ubnt-systool, /usr/bin/apt-get, /usr/bin/apt-cache, /usr/sbin/service unifi *, /usr/bin/java, /bin/cat /data/autobackup/autobackup_meta.json, /bin/cat /srv/unifi/data/backup/autobackup/autobackup_meta.json
