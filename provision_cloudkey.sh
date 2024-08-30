@@ -99,7 +99,7 @@ cp /usr/share/cloudkey-webui/www/settings.inc /usr/share/cloudkey-webui/www/sett
 cp /usr/share/cloudkey-webui/www/api.inc /usr/share/cloudkey-webui/www/api.inc.bak
 #sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
 sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t mongodb dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
-echo '@reboot touch /var/run/unifi_runtime.cfg' >> /var/spool/cron/crontabs/root
+echo '@reboot /usr/bin/touch /var/run/unifi_runtime.cfg' >> /var/spool/cron/crontabs/root
 # if [ ! -f "/etc/rc.local" ]
 # then
 # 	echo -e '#!/bin/sh\n\nexit 0' > /etc/rc.local
