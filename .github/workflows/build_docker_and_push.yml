@@ -21,6 +21,7 @@ jobs:
           else
             echo "New version detected.  Current: $local_version. New: $repo_version"
             echo "Continuing with build."
+            echo "UNIFI_REPO_VESION=$repo_version" >> $GITHUB_ENV
           fi
       
       # - name: Setup tmate session
@@ -49,7 +50,9 @@ jobs:
         with:
           platforms: linux/armhf
           push: true
-          tags: agreenbhm/unifi-cloudkey:latest
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/unifi-cloudkey:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/unifi-cloudkey:$UNIFI_REPO_VERSION
 
       - uses: actions/checkout@v3
       - name: Update local version
