@@ -23,10 +23,10 @@ jobs:
             echo "Continuing with build."
           fi
       
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   with:
+      #     detached: true
           
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -55,10 +55,16 @@ jobs:
       - name: Update local version
         run: |
           apt info unifi 2>/dev/null | grep '^Version: ' | cut -d' ' -f2 > current_uns_version
-          git config --global user.name 'agreenbhm'
-          git config --global user.email 'agreenbhm@users.noreply.github.com'
-          git add current_uns_version
-          git commit -am "Updated UNS version to $(cat current_uns_version)"
-          git push
-      
+          # git config --global user.name 'agreenbhm'
+          # git config --global user.email 'agreenbhm@users.noreply.github.com'
+          # git add current_uns_version
+          # git commit -am "Updated UNS version to $(cat current_uns_version)"
+          # git push
+      - name: Commit new UNS version
+        uses: devops-infra/action-commit-push@master
+        with:
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
+          add_timestamp: true
+          commit_message: "Updating UNS version number"
+          force: false      
 
