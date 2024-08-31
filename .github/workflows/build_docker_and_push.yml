@@ -18,6 +18,9 @@ jobs:
           if [[ "$repo_version" == "$local_version" ]]
           then
             echo "Already up-to-date with version $local_version" && exit 0
+          else
+            echo "New version detected.  Current: $local_version. New: $repo_version"
+            echo "Continuing with build."
           fi
       
       - name: Setup tmate session
