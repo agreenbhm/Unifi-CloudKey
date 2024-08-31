@@ -21,7 +21,7 @@ jobs:
           else
             echo "New version detected.  Current: $local_version. New: $repo_version"
             echo "Continuing with build."
-            echo "UNIFI_REPO_VESION=$repo_version" >> $GITHUB_ENV
+            echo "UNIFI_REPO_VERSION=$repo_version" >> $GITHUB_ENV
           fi
       
       # - name: Setup tmate session
