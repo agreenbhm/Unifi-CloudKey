@@ -6,8 +6,13 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          sudo: false
+          detached: true
+          
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -31,7 +36,4 @@ jobs:
           push: false
           tags: agreenbhm/unifi-cloudkey:latest
       
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          sudo: false
+
