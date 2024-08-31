@@ -13,11 +13,11 @@ jobs:
         run: |
           sudo /bin/sh -c "echo 'deb [ trusted=yes arch=amd64,arm64 ] https://www.ui.com/downloads/unifi/debian stable ubiquiti' > /etc/apt/sources.list.d/100-ubnt-unifi.list"
           sudo apt update
-          export repo-version=$(apt info unifi 2>/dev/null | grep '^Version: ' | cut -d' ' -f2)
-          export local-version=$(cat current_uns_version)
-          if [[ "$repo-version" == "$local-version" ]]
+          export repo_version=$(apt info unifi 2>/dev/null | grep '^Version: ' | cut -d' ' -f2)
+          export local_version=$(cat current_uns_version)
+          if [[ "$repo_version" == "$local_version" ]]
           then
-            echo "Already up-to-date with version $local-version" && exit 0
+            echo "Already up-to-date with version $local_version" && exit 0
           fi
       
       - name: Setup tmate session
