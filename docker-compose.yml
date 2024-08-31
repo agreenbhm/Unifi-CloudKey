@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   mongodb:
-    image: agreenbhm/unifi-cloudkey:8.4.59
+    image: agreenbhm/unifi-cloudkey:latest
     container_name: mongodb
     hostname: mongodb
     network_mode: host
@@ -18,7 +18,7 @@ services:
       start_period: 5s
 
   unifi:
-    image: agreenbhm/unifi-cloudkey:8.4.59
+    image: agreenbhm/unifi-cloudkey:latest
     container_name: unifi
     hostname: unifi
     network_mode: host

@@ -112,7 +112,7 @@ sed -i "s/exec(CMD_SERVICE_UNIFI . ' stop', \$out, \$rc);/exec(CMD_SERVICE_UNIFI
 success "Done"
 
 info "Building Docker image - this will probably take a while..."
-docker build -t agreenbhm/unifi-cloudkey:8.4.59 --network host .
+docker build -t agreenbhm/unifi-cloudkey:latest --network host .
 success "Done"
 
 info "Starting containers..."
