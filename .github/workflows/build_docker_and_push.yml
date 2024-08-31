@@ -52,7 +52,7 @@ jobs:
           push: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/unifi-cloudkey:latest
-            ${{ vars.DOCKERHUB_USERNAME }}/unifi-cloudkey:$UNIFI_REPO_VERSION
+            ${{ vars.DOCKERHUB_USERNAME }}/unifi-cloudkey:${{ env.UNIFI_REPO_VERSION }}
 
       - uses: actions/checkout@v3
       - name: Update local version
