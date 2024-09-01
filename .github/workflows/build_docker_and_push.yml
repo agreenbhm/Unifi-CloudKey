@@ -75,6 +75,6 @@ jobs:
         uses: devops-infra/action-commit-push@master
         with:
           github_token: "${{ secrets.GITHUB_TOKEN }}"
-          commit_message: "Updating UNS version number"
+          commit_message: "Updating UNS version number to ${{ env.UNIFI_REPO_VERSION }}"
           force: false      
 
