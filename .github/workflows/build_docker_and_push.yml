@@ -19,7 +19,9 @@ jobs:
           export local_version=$(cat current_uns_version)
           if [[ "$repo_version" == "$local_version" ]]
           then
-            echo "Already up-to-date with version $local_version" && exit 0
+            echo "Already up-to-date with version $local_version"
+            gh run cancel ${{ github.run_id }}
+            gh run watch ${{ github.run_id }}
           else
             echo "New version detected.  Current: $local_version. New: $repo_version"
             echo "Continuing with build."
