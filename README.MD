@@ -35,7 +35,7 @@ The solution implemented updates the apt repos on the UCK to ones that work in 2
 
 1. SSH into your UCK using the username and password you log into the device's webui with.  Note: this is NOT necessarily the same you use to log into the UNS webui; this is the one you log into the device maintenance page with.
 
-2. Download a .tar.gz version of this repository.  The stock UCK does not have "git" or "unzip" on there, so you need to download the .tar.gz via wget and then unpack.  Then unpack and switch to that directory.
+2. Download a .tar.gz version of this repository.  The stock UCK does not have "git" or "unzip" on there, so you need to download the .tar.gz via wget and unpack.  Then switch to that directory.
     * `wget https://github.com/agreenbhm/Unifi-CloudKey/archive/refs/heads/main.tar.gz`
     * `tar xzvf Unifi-CloudKey-main.tar.gz`
     * `cd Unifi-CloudKey-main`
@@ -43,7 +43,7 @@ The solution implemented updates the apt repos on the UCK to ones that work in 2
 3. Ensure the main script is executable via:
     * `chmod +x ./provision_cloudkey.sh`
 
-4. Run the script as root.  It will take a while (perhaps between 30-60 minutes, as the container needs to build from scratch.  Errors are not necessarily fatal, but keep an eye on the output and if you run into issues make sure you post that to the issue you raise.
+4. Run the script as root.  It will take a while (perhaps between 30-60 minutes), as the container needs to build from scratch.  Errors are not necessarily fatal, but keep an eye on the output and if you run into problems make sure you post that to the issue you raise.
     * `sudo ./provision_cloudkey.sh`
 
 5. When finished, you will need to reboot.  It'll tell you to do so. Give it 5 minutes though before rebooting to let the app finish the initial launch, just to be safe.
