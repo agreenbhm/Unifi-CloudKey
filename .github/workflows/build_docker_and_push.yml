@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Check for UNS update
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo /bin/sh -c "echo 'deb [ trusted=yes arch=amd64,arm64 ] https://www.ui.com/downloads/unifi/debian stable ubiquiti' > /etc/apt/sources.list.d/100-ubnt-unifi.list"
           sudo apt update
