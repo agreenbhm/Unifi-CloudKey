@@ -63,11 +63,15 @@ jobs:
             ${{ vars.DOCKERHUB_USERNAME }}/unifi-cloudkey:${{ env.UNIFI_REPO_VERSION }}
 
       - uses: actions/checkout@v3
+        if: env.UPDATE == 'true'
+
       - name: Update local version
         if: env.UPDATE == 'true'
         run: |
           apt info unifi 2>/dev/null | grep '^Version: ' | cut -d' ' -f2 > current_uns_version
+
       - name: Commit new UNS version
+        if: env.UPDATE == 'true'
         uses: devops-infra/action-commit-push@master
         with:
           github_token: "${{ secrets.GITHUB_TOKEN }}"
