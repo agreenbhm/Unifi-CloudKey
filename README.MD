@@ -43,7 +43,7 @@ The solution implemented updates the apt repos on the UCK to ones that work in 2
 3. Ensure the main script is executable via:
     * `chmod +x ./provision_cloudkey.sh`
 
-4. Run the script as root.  It will take a while (perhaps between 30-60 minutes), as the container needs to build from scratch.  Errors are not necessarily fatal, but keep an eye on the output and if you run into problems make sure you post that to the issue you raise.
+4. Run the script as root.  ~~It will take a while (perhaps between 30-60 minutes), as the container needs to build from scratch.~~  Errors are not necessarily fatal, but keep an eye on the output and if you run into problems make sure you post that to the issue you raise.
     * `sudo ./provision_cloudkey.sh`
 
 5. When finished, you will need to reboot.  It'll tell you to do so. Give it 5 minutes though before rebooting to let the app finish the initial launch, just to be safe.
