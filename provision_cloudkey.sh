@@ -111,8 +111,12 @@ sed -i "s/exec(CMD_SERVICE_UNIFI . ' start', \$out, \$rc);/exec(CMD_SERVICE_UNIF
 sed -i "s/exec(CMD_SERVICE_UNIFI . ' stop', \$out, \$rc);/exec(CMD_SERVICE_UNIFI . ' stop unifi', \$out, \$rc);/g" /usr/share/cloudkey-webui/www/api.inc
 success "Done"
 
-info "Building Docker image - this will probably take a while..."
-docker build -t agreenbhm/unifi-cloudkey:latest --network host .
+# info "Building Docker image - this will probably take a while..."
+# docker build -t agreenbhm/unifi-cloudkey:latest --network host .
+# success "Done"
+
+info "Pulling Docker image..."
+docker pull agreenbhm/unifi-cloudkey:latest
 success "Done"
 
 info "Starting containers..."
