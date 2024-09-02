@@ -67,8 +67,11 @@ Or, to do so manually:
 1. Navigate to the folder this repository is located and pull the latest version via git.
     - `cd <repo_folder>; git pull`
 
-2. Rebuild the container image
-    - `docker build -t agreenbhm/unifi-cloudkey:latest --network host .`
+2. Update the local image, either by rebuilding it locally or pulling it down:
+    - Rebuild the container image
+      - `docker build -t agreenbhm/unifi-cloudkey:latest --network host .`
+    - or, pull the latest version from Docker Hub
+      - `docker pull --platform linux/armhf agreenbhm/unifi-cloudkey:latest`
 
 3. Re-deploy with docker-compose
     - `docker-compose up -d`
