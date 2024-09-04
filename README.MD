@@ -37,7 +37,7 @@ The solution implemented updates the apt repos on the UCK to ones that work in 2
 
 2. Download a .tar.gz version of this repository.  The stock UCK does not have "git" or "unzip" on there, so you need to download the .tar.gz via wget and unpack.  Then switch to that directory.
     * `wget https://github.com/agreenbhm/Unifi-CloudKey/archive/refs/heads/main.tar.gz`
-    * `tar xzvf Unifi-CloudKey-main.tar.gz`
+    * `tar xzvf main.tar.gz`
     * `cd Unifi-CloudKey-main`
 
 3. Ensure the main script is executable via:
