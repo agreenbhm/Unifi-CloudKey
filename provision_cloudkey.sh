@@ -99,7 +99,15 @@ cp /usr/share/cloudkey-webui/www/settings.inc /usr/share/cloudkey-webui/www/sett
 cp /usr/share/cloudkey-webui/www/api.inc /usr/share/cloudkey-webui/www/api.inc.bak
 #sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t unifi dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
 sed -i "s/\$cmd = 'dpkg-query/\$cmd = 'docker exec -t mongodb dpkg-query/g" /usr/share/cloudkey-webui/www/common.inc
-echo '* * * * * /usr/bin/touch /var/run/unifi_runtime.cfg' >> /var/spool/cron/crontabs/root
+# Install through crontab so cron receives the required ownership, permissions,
+# and reload notification. Keep a single entry when provisioning is repeated.
+runtime_marker_job='* * * * * /usr/bin/touch /var/run/unifi_runtime.cfg'
+if ! { (crontab -l 2>/dev/null || true) | grep -Fvx -- "$runtime_marker_job"; printf '%s\n' "$runtime_marker_job"; } | crontab -; then
+    error "Could not install the UniFi runtime marker cron job."
+    exit 1
+fi
+# Show the Network application immediately, before the next cron tick.
+touch /var/run/unifi_runtime.cfg
 # if [ ! -f "/etc/rc.local" ]
 # then
 # 	echo -e '#!/bin/sh\n\nexit 0' > /etc/rc.local
