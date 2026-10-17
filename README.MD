@@ -58,20 +58,22 @@ The solution implemented updates the apt repos on the UCK to ones that work in 2
 9. Done!
 
 ### Upgrading
-Run the "upgrade_cloudkey.sh" script.  It does not currently check for the installed version vs available version, so only run if you know there's an upgrade of UNS available.
+Run `upgrade_cloudkey.sh` from your installation. It pulls the published images selected by that installation's `docker-compose.yml` and recreates containers when their image changes. It works with both the downloaded archive and a git checkout, and can be invoked from another directory. The application and database volume directories are retained. Back up Network before updating, since a newer application may migrate its database.
 
 1. `./upgrade_cloudkey.sh`
 
-Or, to do so manually:
+The script stops if configuration validation or image download fails, before recreating containers. A completed update starts the containers; Network can take several minutes to become ready. If the Compose file selects a version tag instead of `latest`, the script keeps that selected version.
 
-1. Navigate to the folder this repository is located and pull the latest version via git.
-    - `cd <repo_folder>; git pull`
+The published image must contain the matching application-JAR build fix described in [PR #4](https://github.com/agreenbhm/Unifi-CloudKey/pull/4). The updater cannot repair an incompatible published image. Keep an existing locally repaired image selected until a fixed upstream image is published; updating that installation requires selecting the published image in its Compose file first.
 
-2. Update the local image, either by rebuilding it locally or pulling it down:
-    - Rebuild the container image
-      - `docker build -t agreenbhm/unifi-cloudkey:latest --network host .`
-    - or, pull the latest version from Docker Hub
-      - `docker pull --platform linux/armhf agreenbhm/unifi-cloudkey:latest`
+To update manually:
+
+1. Navigate to the installation directory:
+    - `cd <repo_folder>`
+
+2. Validate the configuration and pull the selected images:
+    - `docker-compose config -q`
+    - `docker-compose pull`
 
 3. Re-deploy with docker-compose
     - `docker-compose up -d`

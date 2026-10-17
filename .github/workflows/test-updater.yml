@@ -1,0 +1,22 @@
+name: Test updater
+
+on:
+  pull_request:
+    paths:
+      - upgrade_cloudkey.sh
+      - tests/test_upgrade.py
+      - .github/workflows/test-updater.yml
+  push:
+    branches: [main]
+    paths:
+      - upgrade_cloudkey.sh
+      - tests/test_upgrade.py
+      - .github/workflows/test-updater.yml
+
+jobs:
+  updater:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n upgrade_cloudkey.sh
+      - run: python3 tests/test_upgrade.py

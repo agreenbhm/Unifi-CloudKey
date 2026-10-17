@@ -1,9 +1,25 @@
 #!/bin/bash
+set -euo pipefail
 
-echo "This will probably take a while as the container needs to rebuild."
+# Provisioning supports a downloaded archive on hosts without git. Updates use
+# the published images selected by that installation's Compose file as well.
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+cd "$SCRIPT_DIR"
 
-git pull
+if command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE=(docker-compose)
+elif docker compose version >/dev/null 2>&1; then
+    COMPOSE=(docker compose)
+else
+    echo "Docker Compose is required; run provisioning first." >&2
+    exit 1
+fi
+COMPOSE+=(-f "$SCRIPT_DIR/docker-compose.yml")
 
-docker build -t agreenbhm/unifi-cloudkey:latest --network host .
+"${COMPOSE[@]}" config -q
+echo "Pulling the images selected by $SCRIPT_DIR/docker-compose.yml..."
+"${COMPOSE[@]}" pull
 
-docker-compose up -d
+echo "Applying the update..."
+"${COMPOSE[@]}" up -d
+echo "Containers started. Network may take several minutes to become ready."
