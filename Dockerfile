@@ -29,12 +29,12 @@ RUN chmod +x /etc/init.d/mongodb; \
  rm -rf /tmp/*; \
  apt download unifi
 
-COPY ace.jar /tmp/
 COPY repack_unifi.sh /tmp/
+COPY tools/PatchUnifi.java /tmp/tools/PatchUnifi.java
 
 RUN chmod +x /tmp/repack_unifi.sh; \
- /tmp/repack_unifi.sh /tmp/unifi*.deb /tmp/ace.jar; \
- apt install -yf /tmp/*-modified.deb; \
+ /tmp/repack_unifi.sh /tmp/unifi*.deb && \
+ apt install -yf /tmp/*-modified.deb && \
  rm -rf /tmp/*
 
 COPY armv7 /usr/lib/unifi/lib/native/Linux/armv7/

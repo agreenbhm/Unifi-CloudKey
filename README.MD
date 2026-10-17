@@ -16,9 +16,13 @@ They claim that newer versions of the UNS software require 64-bit hardware, whic
 
 1. The 64-bit native libraries included in newer versions of UNS match the hashes of the libraries from the older version that's on the UCK, meaning nothing there has changed.  That being the case, since the 32-bit libraries are available on the UCK, you can copy the 32-bit files into the newer version of UNS and they work just fine.
 
-2. There is a single "if" statement during program launch that checks the CPU architecture and returns false if it's 32-bit.  That was easily patched by editing the Java bytecode to always return true.
+2. The image build patches the 32-bit rejection in `Launcher.main` inside the downloaded package's own `ace.jar`. It retains that release's other classes and dependency manifest. The patcher requires exactly one recognized architecture check followed by the `32-bit OS not supported!` error and exit; an unknown layout stops the build for review. It does not change the architecture detector used to select native libraries.
 
 3. By unpacking the .deb, removing the model check, and repacking, this control can easily be bypassed.
+
+The checked-in historical `ace.jar` is no longer used during builds. Replacing a newer package's JAR with that older file mixes application versions and dependencies. `repack_unifi.sh <package.deb>` instead compiles `tools/PatchUnifi.java` with the JDK already installed in the build image and patches the matching JAR automatically. This removes the launcher restriction; native library compatibility still needs verification for each new release.
+
+Image builds run when the build files change on `main`, when manually dispatched, or when the scheduled check finds a new upstream package. A manual build rebuilds the current version even when its version number has not changed.
 
 ### Deployment Approach
 The goal of this project was to allow running the latest UNS on the UCK with minimal modification to the UCK.  I found two ways to get things running:
@@ -77,6 +81,8 @@ Or, to do so manually:
     - `docker-compose up -d`
 
 ### Testing
+Run `python3 tests/test_repack.py` with JDK 17 and `dpkg-deb` installed to check the bytecode patch and package repacking using a generated fixture. These tests verify that the patched class executes, unknown or ambiguous gates are rejected, other JAR entries and the manifest remain unchanged, and package checksums match. The test does not download UniFi or prove native ARM library compatibility.
+
 There is also a "provision_vm.sh" script in the repo which is only meant for test purposes on non-UCK hardware.  If you want to play with it or help with development, set up an aarch64/ARM64 VM running Debian 12, download the repo, and then run "provision_vm.sh".  This will provision the VM to look like the UCK (the device management webui is installed), and then build/install arm/armhf/ARM32 containers within Docker.  When all is done you will be able to navigate to the webui for the UCK on your VM and test as if you had a native UCK.
 
 NOTE: you MUST run this on a platform that supports arm/armhf/ARM32 (which Apple Silicon Macs do not).  So either on a VM on a native aarch64 machine, or an emulated aarch64 VM on MacOS.  I did the latter using QEMU/UTM, with the "virtualize" option OFF (since native virtualization does not support armhf on Apple Silicon).
