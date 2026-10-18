@@ -20,6 +20,8 @@ They claim that newer versions of the UNS software require 64-bit hardware, whic
 
 3. By unpacking the .deb, removing the model check, and repacking, this control can easily be bypassed.
 
+The image also installs Debian's `libsnappy-jni` package and directs snappy-java to its ARMhf native library. The native Linux `arm` and `armv7` libraries bundled with snappy-java 1.1.10.5 use the soft-float ABI and cannot load into the ARMhf JVM. This can leave the web application running while device inform requests fail during Snappy initialization. `JAVA_TOOL_OPTIONS` supplies the library path to both the initial JVM and any JVM launched during an application restart. An image-build smoke test compresses and decompresses data using the application's actual snappy-java JAR; an incompatible binding or native library stops the build.
+
 ### Deployment Approach
 The goal of this project was to allow running the latest UNS on the UCK with minimal modification to the UCK.  I found two ways to get things running:
 

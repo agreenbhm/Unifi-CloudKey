@@ -50,4 +50,16 @@ RUN chmod +x /etc/init.d/unifi; \
 #RUN chmod +x /entrypoint.sh
 
 WORKDIR /
+
+# The bundled snappy-java Linux/arm and Linux/armv7 libraries use the soft-float
+# ABI. Debian's ARMhf JVM needs the distribution's hard-float JNI build.
+# JAVA_TOOL_OPTIONS also reaches JVMs started by the application during restart.
+ENV JAVA_TOOL_OPTIONS="-Dorg.xerial.snappy.lib.path=/usr/lib/arm-linux-gnueabihf/jni"
+COPY tools/SnappyNativeSmoke.java /tmp/SnappyNativeSmoke.java
+RUN apt-get update && \
+ apt-get install -y --no-install-recommends libsnappy-jni && \
+ mkdir -p /tmp/snappy-smoke && \
+ javac -cp '/usr/lib/unifi/lib/*:/usr/lib/unifi/lib/local/*' -d /tmp/snappy-smoke /tmp/SnappyNativeSmoke.java && \
+ java -cp '/tmp/snappy-smoke:/usr/lib/unifi/lib/*:/usr/lib/unifi/lib/local/*' SnappyNativeSmoke && \
+ rm -rf /tmp/snappy-smoke /tmp/SnappyNativeSmoke.java /var/lib/apt/lists/*
 #ENTRYPOINT [ "/entrypoint.sh" ]
